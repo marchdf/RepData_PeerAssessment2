@@ -1,4 +1,17 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
 
+## Load some libraries
+```{r}
+library(stringr)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+```
 
 ## Download the data
 
@@ -7,7 +20,7 @@ Download the data and extract it only if it has not been done yet.
 Setup some directory, file, and url names 
 ```{r}
 datadir <- "./data"
-tarname <- "./data/stormdata.csv.bz2"
+tarname <- paste(datadir,"/stormdata.csv.bz2",sep='')
 furl    <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 ```
 
@@ -26,3 +39,5 @@ if(!exists("dataf")) {
     dataf <- read.csv(tarname)
 }
 ```
+
+## Format the data
