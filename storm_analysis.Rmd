@@ -1,0 +1,28 @@
+
+
+## Download the data
+
+Download the data and extract it only if it has not been done yet.
+
+Setup some directory, file, and url names 
+```{r}
+datadir <- "./data"
+tarname <- "./data/stormdata.csv.bz2"
+furl    <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+```
+
+Create data directory and download the tar file and load the data (if
+it hasn't been done already)
+```{r}
+dir.create(datadir, showWarnings = FALSE)
+
+## Download data if necessary
+if (!file.exists(tarname)) {
+    download.file(furl,tarname)
+}
+
+## Load the data if it hasn't been loaded yet
+if(!exists("dataf")) {
+    dataf <- read.csv(tarname)
+}
+```
