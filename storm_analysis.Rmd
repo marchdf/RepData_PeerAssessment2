@@ -4,6 +4,10 @@ output:
   html_document:
     keep_md: true
 ---
+# Synopsis
+
+
+# Data Processing
 
 ## Load some libraries
 ```{r}
@@ -41,3 +45,5 @@ if(!exists("dataf")) {
 ```
 
 ## Format the data
+
+# Results
