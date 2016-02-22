@@ -46,4 +46,72 @@ if(!exists("dataf")) {
 
 ## Format the data
 
+Let's only keep the columns that will be usefull
+```{r}
+keep <- c("BGN_DATE","BGN_TIME","EVTYPE","FATALITIES","INJURIES","PROPDMG","PROPDMGEXP","CROPDMG","CROPDMGEXP")
+df <- dataf[keep]
+```
+
+Let's remove all the data which has no fatalities, injuries, property
+damage, and crop damage.
+```{r}
+df <- df %>%
+    filter(FATALITIES > 0 | INJURIES > 0 | PROPDMG > 0 | CROPDMG > 0) %>%
+    droplevels()
+dfrows <- nrow(df)
+```
+We just removed `r 100*(1-dfrows/nrow(dataf))`% of the data (events
+which had no health or economic damage).
+
+Now, let's remove the data which doesn't have a valid exponent and add
+columns corresponding to the numeric value of the letter symbol
+exponent (H=100, K=1000, M=1000000, B=1000000000). We create two new
+columns where we combine the values and exponents of the crop and
+property damage.
+```{r}
+## Make it the exponent letters uppercase (for consistency)
+df <- df %>%
+    mutate_each( funs(toupper),PROPDMGEXP,CROPDMGEXP) %>%
+    mutate_each( funs(as.character),PROPDMGEXP,CROPDMGEXP) %>%
+    droplevels()
+
+## This lookup table makes the correspondance between letters and numbers
+lookup_exp <- data.frame(c("","H","K","M","B"),
+                         numeric.value=c(1,100,1000,1000000,1000000000))
+
+## Change the column names and join with the two for the crops
+colnames(lookup_exp) <- c("CROPDMGEXP", "CROPEXPVALUE")
+df <- left_join(df,lookup_exp)
+
+## Change the column names and join with the two for the property
+colnames(lookup_exp) <- c("PROPDMGEXP", "PROPEXPVALUE")
+df <- left_join(df,lookup_exp)
+
+## Change the name again just to make things clean
+colnames(lookup_exp) <- c("valid_exp", "numeric.value")
+
+## Now create new columns which contain the full numeric value of the
+## damage done (P/CROPDMG*P/CROPEXPVALUE)
+df <- df %>%
+    mutate(NUMERIC.PROPDMG = PROPDMG*PROPEXPVALUE,
+           NUMERIC.CROPDMG = CROPDMG*CROPEXPVALUE)
+```
+
+tmp$EVTYPE <- as.factor(toupper(tmp$EVTYPE))
+
+
+
+
+```{r}
+## sumdf <- dataf %>%
+##     group_by(CROPDMGEXP) %>%
+##     summarize(no_rows=length(CROPDMGEXP)) %>%
+##     filter(CROPDMGEXP %in% valid_exp)
+## sumdf <- dataf %>%
+##     group_by(PROPDMGEXP) %>%
+##     summarize(no_rows=length(PROPDMGEXP)) %>%
+##     filter(PROPDMGEXP %in% valid)
+```
+We just dropped `r 1-sum(sumdf$no_row)/nrow(dataf)`% of the data.
+
 # Results
