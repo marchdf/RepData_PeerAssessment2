@@ -97,7 +97,111 @@ df <- df %>%
            NUMERIC.CROPDMG = CROPDMG*CROPEXPVALUE)
 ```
 
-tmp$EVTYPE <- as.factor(toupper(tmp$EVTYPE))
+
+Format the event types and drop those that look like mistakes
+- drop the "?" event type
+- drop the "apache county" event type
+- replace "tstm" with "thunderstorm"
+```{r}
+tmp <- df %>%
+    mutate(EVTYPE = as.factor(tolower(df$EVTYPE))) %>%
+    filter(!grepl('\\?|apache county', EVTYPE)) %>%
+    mutate(EVTYPE=as.factor(str_replace(EVTYPE, "tstm", "thunderstorm"))) %>%
+    droplevels()
+
+tmp <- tmp %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*torn.*", "tornado")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*thunderstorm.*", "thunderstorm wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*thuderstorm winds.*", "thunderstorm wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*thundeerstorm winds.*", "thunderstorm wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*thunderestorm winds.*", "thunderstorm wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*thunderstrom wind.*", "thunderstorm wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*thundertorm winds.*", "thunderstorm wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*thunerstorm winds.*", "thunderstorm wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*tunderstorm wind.*", "thunderstorm wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*flooding.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*river flood.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*river flooding.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*breakup flooding.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*flood & heavy rain.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*flooding/heavy rain.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*flood/rain/winds.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*flood/river flood.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*floods.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*major flood.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*minor flooding.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*river and stream flood.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*rural flood.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*small stream flood.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*snowmelt flooding.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*urban.*", "flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*lake flood.*", "lakeshore flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*flash.*", "flash flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*coastal flooding.*", "coastal flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*coastal  flooding/erosion.*", "coastal flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*tidal flooding.*", "coastal flood")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*heat.*", "heat")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*lightning.*", "lightning")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*ice.*", "ice")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*hail.*", "hail")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*hurricane.*", "hurricane/typhoon")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*typhoon.*", "hurricane/typhoon")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*winter storm.*", "winter storm")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*rip.*", "rip current")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*avala.*", "avalanche")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*blizzard.*", "blizzard")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*tropical.*", "tropical strom")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*wild.*", "wildfire")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*surge.*", "storm tide")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*land.*", "land slide")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*heavy rain.*", "heavy rain")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*strong wind.*", "strong wind")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*extreme.*", "extreme cold/wind chill")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*frost.*", "frost/freeze")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*freeze.*", "frost/freeze")) %>%
+    mutate(EVTYPE=str_replace(EVTYPE, ".*high wind.*", "high wind")) %>%
+    group_by(EVTYPE) %>%
+    ## summarize(num = sum(INJURIES)) %>%
+    ## summarize(num = sum(FATALITIES)) %>%
+    summarize(num = sum(NUMERIC.PROPDMG)) %>%
+    ## summarize(num = sum(NUMERIC.CROPDMG)) %>%
+    mutate(percent = num/(sum(num,na.rm=TRUE))*100)
+
+
+write.csv(tmp[order(tmp$num, decreasing= T),],"c.csv")
+
+##evtypes <- levels(tmp$EVTYPE)
+
+
+
+## types <- c("Astronomical Tide","Avalanche","Blizzard","Coastal Flood","Cold/Wind Chill","Debris Flow","Dense Fog ","Dense Smoke","Drought","Dust Devil","Dust Storm","Extreme Cold/Wind Chill","Flash Flood","Flood","Freezing Fog","Frost/Freeze","Funnel Cloud","Hail","Heat","Heavy Rain","Heavy Snow","High Surf","High Wind","Hurricane/Typhoon","Ice","Lakeshore Flood","Lake-Effect Snow","Lightning","Hail","Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Tide","Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression","Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire","Winter Storm","Winter Weather","Land Slide")
+
+## d <- adist(evtypes, types, ignore.case=TRUE)
+## rownames(d) <- evtypes
+## colnames(d) <- types
+## result <- data.frame(t(sapply(seq(nrow(d)), function(i) { j <- which.min(d[i,]); c(rownames(d)[i], colnames(d)[j], as.numeric(d[i,j]))})))
+## colnames(result) <- c("EVTYPE","guess.type","score")
+## result$score <- as.numeric(result$score)
+## result %>% group_by(score) %>% summarize(no_rows = length(score))
+
+## tmp <- df %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "severe thunderstorm", "thunderstorm wind")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "snowmelt flooding", "flood")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "urban and small", "flood")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "falling snow/ice", "heavy snow")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
+##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
+    
+##     droplevels()
+
+
+
+```
+
 
 
 
