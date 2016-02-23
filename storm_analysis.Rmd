@@ -1,20 +1,19 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: "Marc T. Henry de Frahan"
 output: 
   html_document:
     keep_md: true
 ---
 # Synopsis
 
-
-# Data Processing
-
-## Load some libraries
+# Load some libraries
 ```{r}
 library(stringr)
 library(dplyr)
 library(lubridate)
 library(ggplot2)
+library(DataCombine)
 ```
 
 ## Download the data
@@ -44,7 +43,7 @@ if(!exists("dataf")) {
 }
 ```
 
-## Format the data
+# Data Processing
 
 Let's only keep the columns that will be usefull
 ```{r}
@@ -60,8 +59,8 @@ df <- df %>%
     droplevels()
 dfrows <- nrow(df)
 ```
-We just removed `r 100*(1-dfrows/nrow(dataf))`% of the data (events
-which had no health or economic damage).
+We just removed `r sprintf("%.2f",100*(1-dfrows/nrow(dataf)))`% of the
+data (events which had no health or economic damage).
 
 Now, let's remove the data which doesn't have a valid exponent and add
 columns corresponding to the numeric value of the letter symbol
@@ -81,11 +80,11 @@ lookup_exp <- data.frame(c("","H","K","M","B"),
 
 ## Change the column names and join with the two for the crops
 colnames(lookup_exp) <- c("CROPDMGEXP", "CROPEXPVALUE")
-df <- left_join(df,lookup_exp)
+df <- left_join(df,lookup_exp,by="CROPDMGEXP")
 
 ## Change the column names and join with the two for the property
 colnames(lookup_exp) <- c("PROPDMGEXP", "PROPEXPVALUE")
-df <- left_join(df,lookup_exp)
+df <- left_join(df,lookup_exp,by="PROPDMGEXP")
 
 ## Change the name again just to make things clean
 colnames(lookup_exp) <- c("valid_exp", "numeric.value")
@@ -99,123 +98,114 @@ df <- df %>%
 
 
 Format the event types and drop those that look like mistakes
+
+- make the events all lower case
 - drop the "?" event type
 - drop the "apache county" event type
-- replace "tstm" with "thunderstorm"
+
 ```{r}
-tmp <- df %>%
+df <- df %>%
     mutate(EVTYPE = as.factor(tolower(df$EVTYPE))) %>%
     filter(!grepl('\\?|apache county', EVTYPE)) %>%
-    mutate(EVTYPE=as.factor(str_replace(EVTYPE, "tstm", "thunderstorm"))) %>%
     droplevels()
+```
 
-tmp <- tmp %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*torn.*", "tornado")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*thunderstorm.*", "thunderstorm wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*thuderstorm winds.*", "thunderstorm wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*thundeerstorm winds.*", "thunderstorm wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*thunderestorm winds.*", "thunderstorm wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*thunderstrom wind.*", "thunderstorm wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*thundertorm winds.*", "thunderstorm wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*thunerstorm winds.*", "thunderstorm wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*tunderstorm wind.*", "thunderstorm wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*flooding.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*river flood.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*river flooding.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*breakup flooding.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*flood & heavy rain.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*flooding/heavy rain.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*flood/rain/winds.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*flood/river flood.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*floods.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*major flood.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*minor flooding.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*river and stream flood.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*rural flood.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*small stream flood.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*snowmelt flooding.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*urban.*", "flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*lake flood.*", "lakeshore flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*flash.*", "flash flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*coastal flooding.*", "coastal flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*coastal  flooding/erosion.*", "coastal flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*tidal flooding.*", "coastal flood")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*heat.*", "heat")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*lightning.*", "lightning")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*ice.*", "ice")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*hail.*", "hail")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*hurricane.*", "hurricane/typhoon")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*typhoon.*", "hurricane/typhoon")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*winter storm.*", "winter storm")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*rip.*", "rip current")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*avala.*", "avalanche")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*blizzard.*", "blizzard")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*tropical.*", "tropical strom")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*wild.*", "wildfire")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*surge.*", "storm tide")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*land.*", "land slide")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*heavy rain.*", "heavy rain")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*strong wind.*", "strong wind")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*extreme.*", "extreme cold/wind chill")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*frost.*", "frost/freeze")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*freeze.*", "frost/freeze")) %>%
-    mutate(EVTYPE=str_replace(EVTYPE, ".*high wind.*", "high wind")) %>%
+Our next step will be to replace some of the event strings that have
+typos and are generally inconsistent with the 48 categories specified
+in the documentation for the data. After all the formating we have
+done so far, we are left with `r length(levels(df$EVTYPE))`
+unformatted event types in our data. We need to devise a strategy to
+sort those unformatted event types into the 48 established NOAA
+weather event categories. We will adopt the following strategy, for
+each type of damage (fatality, injury, property damage or crop
+damage):
+
+1. Identify the top 10 event categories that contribute to this type of damage.
+2. For each of these categories, check the total list of events and identify possible duplicates/abbreviations/typos that fit a top 10 category.
+3. Identify the substring that will allow us to replace this unformatted category with the established one.
+4. Repeat 1-2-3 until the top 10 contributing categories don't change.
+
+This procedure results in the following string substitutions that will
+transform the list of unformatted categories into established NOAA
+categories.
+```{r}
+original <- c(".*torn.*", ".*tstm.*", ".*thunderstorm.*", ".*thuderstorm winds.*", ".*thundeerstorm winds.*", ".*thunderestorm winds.*", ".*thunderstrom wind.*", ".*thundertorm winds.*", ".*thunerstorm winds.*", ".*tunderstorm wind.*", ".*coastal flooding.*", ".*coastal flooding/erosion.*", ".*tidal flooding.*", ".*flooding.*", ".*river flood.*", ".*flood & heavy rain.*", ".*flood/rain/winds.*", ".*flood/river flood.*", ".*floods.*", ".*major flood.*", ".*river and stream flood.*", ".*rural flood.*", ".*small stream flood.*", ".*urban.*", ".*lake flood.*", ".*flash.*", ".*heat.*", ".*lightning.*", ".*ice.*", ".*hail.*", ".*hurricane.*", ".*typhoon.*", ".*winter storm.*", ".*rip.*", ".*avala.*", ".*blizzard.*", ".*tropical.*", ".*wild.*", ".*surge.*", ".*land.*", ".*heavy rain.*", ".*strong wind.*", ".*extreme.*", ".*frost.*", ".*freeze.*", ".*high wind.*", ".*snow.*", ".*fog.*", ".*surf.*")
+replacement <- c("tornado", "thunderstorm wind", "thunderstorm wind", "thunderstorm wind", "thunderstorm wind", "thunderstorm wind", "thunderstorm wind", "thunderstorm wind", "thunderstorm wind", "thunderstorm wind", "coastal flood", "coastal flood", "coastal flood", "flood", "flood", "flood", "flood", "flood", "flood", "flood", "flood", "flood", "flood", "flood", "lakeshore flood", "flash flood", "heat", "lightning", "ice", "hail", "hurricane/typhoon", "hurricane/typhoon", "winter storm", "rip current", "avalanche", "blizzard", "tropical strom", "wildfire", "storm tide", "land slide", "heavy rain", "strong wind", "extreme cold/wind chill", "frost/freeze", "frost/freeze", "high wind","snow","fog","high surf")
+replace_types <- data.frame(from=original, to = replacement)
+
+# Replace the strings
+df <- FindReplace(data = df, Var = "EVTYPE", replaceData = replace_types, from = "from", to = "to", exact = FALSE)
+```
+
+Now we have a data frame where the event types have been cleaned such
+that we can rely on the data for the top 15 event types that
+contribute to the four types of damage we are interested in. We can
+check that these categories account for most of the damage in each
+damage category.
+```{r}
+sumdf <- df %>%
+    mutate(EVTYPE = as.factor(EVTYPE)) %>%
     group_by(EVTYPE) %>%
-    ## summarize(num = sum(INJURIES)) %>%
-    ## summarize(num = sum(FATALITIES)) %>%
-    summarize(num = sum(NUMERIC.PROPDMG)) %>%
-    ## summarize(num = sum(NUMERIC.CROPDMG)) %>%
-    mutate(percent = num/(sum(num,na.rm=TRUE))*100)
+    summarize(num.injuries   = sum(INJURIES),
+              num.fatalities = sum(FATALITIES),
+              num.propdmg    = sum(NUMERIC.PROPDMG),
+              num.cropdmg    = sum(NUMERIC.CROPDMG)) %>%
+    mutate(percent.injuries   = num.injuries/sum(num.injuries,na.rm=TRUE)*100,
+           percent.fatalities = num.fatalities/sum(num.fatalities,na.rm=TRUE)*100,
+           percent.propdmg    = num.propdmg/sum(num.propdmg,na.rm=TRUE)*100,
+           percent.cropdmg    = num.cropdmg/sum(num.cropdmg,na.rm=TRUE)*100)
+top.injuries   <- sum(head(sumdf[order(sumdf$percent.injuries, decreasing= TRUE), "percent.injuries"],15))
+top.fatalities <- sum(head(sumdf[order(sumdf$percent.fatalities, decreasing= TRUE), "percent.fatalities"],15))
+top.propdmg    <- sum(head(sumdf[order(sumdf$percent.propdmg, decreasing= TRUE), "percent.propdmg"],15))
+top.cropdmg    <- sum(head(sumdf[order(sumdf$percent.cropdmg, decreasing= TRUE), "percent.cropdmg"],15))
+```
+For each damage category, we are accounting over 90% of the total damage:
+
+- `r sprintf("%.2f",top.injuries)`% of injuries
+- `r sprintf("%.2f",top.fatalities)`% of fatalities
+- `r sprintf("%.2f",top.propdmg)`% of property damage
+- `r sprintf("%.2f",top.cropdmg)`% of crop damage
+
+which leads us to believe that the data is in reasonably good shape for the rest of our analysis
 
 
-write.csv(tmp[order(tmp$num, decreasing= T),],"c.csv")
+# Results
 
-##evtypes <- levels(tmp$EVTYPE)
+The data has been formatted as specified in the previous section. We
+will now analyze the data and answer the two guiding questions:
+
+1. Across the United States, which types of events (as indicated in
+   the EVTYPE variable) are most harmful with respect to population
+   health?
+2. Across the United States, which types of events have the greatest
+   economic consequences?
+
+## Events most harmful to population health
+
+
+```{r}
+sumdf <- df %>%
+    mutate(EVTYPE = as.factor(EVTYPE)) %>%
+    group_by(EVTYPE) %>%
+    summarize(num.injuries   = sum(INJURIES),
+              num.fatalities = sum(FATALITIES),
+              num.propdmg    = sum(NUMERIC.PROPDMG),
+              num.cropdmg    = sum(NUMERIC.CROPDMG)) %>%
+    mutate(percent.injuries   = num.injuries/sum(num.injuries,na.rm=TRUE)*100,
+           percent.fatalities = num.fatalities/sum(num.fatalities,na.rm=TRUE)*100,
+           percent.propdmg    = num.propdmg/sum(num.propdmg,na.rm=TRUE)*100,
+           percent.cropdmg    = num.cropdmg/sum(num.cropdmg,na.rm=TRUE)*100)
+```
+
+## Events with the greatest economic consequences
 
 
 
-## types <- c("Astronomical Tide","Avalanche","Blizzard","Coastal Flood","Cold/Wind Chill","Debris Flow","Dense Fog ","Dense Smoke","Drought","Dust Devil","Dust Storm","Extreme Cold/Wind Chill","Flash Flood","Flood","Freezing Fog","Frost/Freeze","Funnel Cloud","Hail","Heat","Heavy Rain","Heavy Snow","High Surf","High Wind","Hurricane/Typhoon","Ice","Lakeshore Flood","Lake-Effect Snow","Lightning","Hail","Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Tide","Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression","Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire","Winter Storm","Winter Weather","Land Slide")
 
-## d <- adist(evtypes, types, ignore.case=TRUE)
-## rownames(d) <- evtypes
-## colnames(d) <- types
-## result <- data.frame(t(sapply(seq(nrow(d)), function(i) { j <- which.min(d[i,]); c(rownames(d)[i], colnames(d)[j], as.numeric(d[i,j]))})))
-## colnames(result) <- c("EVTYPE","guess.type","score")
-## result$score <- as.numeric(result$score)
-## result %>% group_by(score) %>% summarize(no_rows = length(score))
 
-## tmp <- df %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "severe thunderstorm", "thunderstorm wind")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "snowmelt flooding", "flood")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "urban and small", "flood")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "falling snow/ice", "heavy snow")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
-##     mutate(EVTYPE=str_replace(EVTYPE, "", "")) %>%
+```{r}
+## types <- c("Astronomical Tide","Avalanche","Blizzard","Coastal Flood","Cold/Wind Chill","Debris Flow","Fog","Dense Smoke","Drought","Dust Devil","Dust Storm","Extreme Cold/Wind Chill","Flash Flood","Flood","Frost/Freeze","Funnel Cloud","Hail","Heat","Heavy Rain","Heavy Snow","High Surf","High Wind","Hurricane/Typhoon","Ice","Lakeshore Flood",,"Lightning","Hail","Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Tide","Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression","Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire","Winter Storm","Winter Weather","Land Slide")
     
 ##     droplevels()
 
-
-
 ```
-
-
-
-
-
-```{r}
-## sumdf <- dataf %>%
-##     group_by(CROPDMGEXP) %>%
-##     summarize(no_rows=length(CROPDMGEXP)) %>%
-##     filter(CROPDMGEXP %in% valid_exp)
-## sumdf <- dataf %>%
-##     group_by(PROPDMGEXP) %>%
-##     summarize(no_rows=length(PROPDMGEXP)) %>%
-##     filter(PROPDMGEXP %in% valid)
-```
-We just dropped `r 1-sum(sumdf$no_row)/nrow(dataf)`% of the data.
-
-# Results
