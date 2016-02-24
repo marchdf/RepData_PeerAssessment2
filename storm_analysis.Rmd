@@ -148,12 +148,16 @@ sumdf <- df %>%
     group_by(EVTYPE) %>%
     summarize(num.injuries   = sum(INJURIES),
               num.fatalities = sum(FATALITIES),
+	      num.health     = sum(INJURIES+FATALITIES),
               num.propdmg    = sum(NUMERIC.PROPDMG),
-              num.cropdmg    = sum(NUMERIC.CROPDMG)) %>%
+              num.cropdmg    = sum(NUMERIC.CROPDMG),
+	      num.econ       = sum(NUMERIC.PROPDMG+NUMERIC.CROPDMG)) %>%
     mutate(percent.injuries   = num.injuries/sum(num.injuries,na.rm=TRUE)*100,
            percent.fatalities = num.fatalities/sum(num.fatalities,na.rm=TRUE)*100,
+	   percent.health     = num.health/sum(num.health,na.rm=TRUE)*100,
            percent.propdmg    = num.propdmg/sum(num.propdmg,na.rm=TRUE)*100,
-           percent.cropdmg    = num.cropdmg/sum(num.cropdmg,na.rm=TRUE)*100)
+           percent.cropdmg    = num.cropdmg/sum(num.cropdmg,na.rm=TRUE)*100,
+	   percent.econ       = num.econ/sum(num.econ,na.rm=TRUE)*100)
 top.injuries   <- sum(head(sumdf[order(sumdf$percent.injuries, decreasing= TRUE), "percent.injuries"],15))
 top.fatalities <- sum(head(sumdf[order(sumdf$percent.fatalities, decreasing= TRUE), "percent.fatalities"],15))
 top.propdmg    <- sum(head(sumdf[order(sumdf$percent.propdmg, decreasing= TRUE), "percent.propdmg"],15))
@@ -184,20 +188,16 @@ will now analyze the data and answer the two guiding questions:
 
 
 ```{r}
-sumdf <- df %>%
-    mutate(EVTYPE = as.factor(EVTYPE)) %>%
-    group_by(EVTYPE) %>%
-    summarize(num.injuries   = sum(INJURIES),
-              num.fatalities = sum(FATALITIES),
-              num.propdmg    = sum(NUMERIC.PROPDMG),
-              num.cropdmg    = sum(NUMERIC.CROPDMG)) %>%
-    mutate(percent.injuries   = num.injuries/sum(num.injuries,na.rm=TRUE)*100,
-           percent.fatalities = num.fatalities/sum(num.fatalities,na.rm=TRUE)*100,
-           percent.propdmg    = num.propdmg/sum(num.propdmg,na.rm=TRUE)*100,
-           percent.cropdmg    = num.cropdmg/sum(num.cropdmg,na.rm=TRUE)*100)
+smalldf <- head(sumdf[order(sumdf$percent.health, decreasing= TRUE), ],15)
+ggplot(smalldf, aes(x=reorder(EVTYPE,percent.health), y=percent.health)) +  geom_bar(stat='identity') + coord_flip() + labs(x = "Event Type", y = "Percent of fatalities and injuries", title = "Health impact of weather events")
 ```
 
 ## Events with the greatest economic consequences
+```{r}
+smalldf <- head(sumdf[order(sumdf$percent.econ, decreasing= TRUE), ],15)
+ggplot(smalldf, aes(x=reorder(EVTYPE,percent.econ), y=percent.econ)) +  geom_bar(stat='identity') + coord_flip() + labs(x = "Event Type", y = "Percent of property and crop damage", title = "Health impact of weather events")
+```
+
 
 
 
